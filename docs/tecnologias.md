@@ -27,6 +27,7 @@ O JavaScript será utilizado junto com o React para criar as funcionalidades do 
 ## Backend e Banco de Dados
 
 ### Firebase
+### SQLite
 
 O Firebase será utilizado como backend do projeto, facilitando o armazenamento das informações sem a necessidade de criar um servidor próprio.
 
@@ -35,6 +36,7 @@ O Firebase será utilizado como backend do projeto, facilitando o armazenamento 
 ## Banco de Dados
 
 ### Firestore
+### SQLite
 
 O Firestore será utilizado para armazenar os dados dos medicamentos, horários e histórico.
 
