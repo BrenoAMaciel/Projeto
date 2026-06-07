@@ -1,0 +1,208 @@
+// src/database/database.js
+
+import * as SQLite from 'expo-sqlite';
+
+const db = SQLite.openDatabaseSync('hora_remedio.db');
+
+export default db;
+
+
+// src/models/tabelas.js
+
+import db from '../database/database';
+
+export const criarTabelas = () => {
+
+  db.execSync(`
+
+    CREATE TABLE IF NOT EXISTS medicamentos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL,
+      dosagem TEXT NOT NULL,
+      observacao TEXT,
+      ativo INTEGER DEFAULT 1,
+      criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS horarios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      medicamento_id INTEGER NOT NULL,
+      horario TEXT NOT NULL,
+      lembrete_ativo INTEGER DEFAULT 1,
+
+      FOREIGN KEY (medicamento_id)
+      REFERENCES medicamentos(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS historico (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      medicamento_id INTEGER NOT NULL,
+      horario_id INTEGER NOT NULL,
+      data_tomada DATETIME NOT NULL,
+      status TEXT NOT NULL,
+
+      FOREIGN KEY (medicamento_id)
+      REFERENCES medicamentos(id),
+
+      FOREIGN KEY (horario_id)
+      REFERENCES horarios(id)
+    );
+
+  `);
+
+};
+
+
+// src/services/medicamentoService.js
+
+import db from '../database/database';
+
+export const criarMedicamento = (
+  nome,
+  dosagem,
+  observacao
+) => {
+
+  const query = `
+    INSERT INTO medicamentos
+    (nome, dosagem, observacao)
+    VALUES (?, ?, ?)
+  `;
+
+  db.runSync(
+    query,
+    [nome, dosagem, observacao]
+  );
+
+};
+
+export const listarMedicamentos = () => {
+
+  return db.getAllSync(`
+    SELECT *
+    FROM medicamentos
+    WHERE ativo = 1
+    ORDER BY nome
+  `);
+
+};
+
+
+// src/services/horarioService.js
+
+import db from '../database/database';
+
+export const criarHorario = (
+  medicamentoId,
+  horario
+) => {
+
+  db.runSync(
+    `
+      INSERT INTO horarios
+      (
+        medicamento_id,
+        horario
+      )
+      VALUES (?, ?)
+    `,
+    [medicamentoId, horario]
+  );
+
+};
+
+export const listarMedicamentosDoDia = () => {
+
+  return db.getAllSync(`
+
+    SELECT
+      m.id,
+      m.nome,
+      m.dosagem,
+      h.id AS horario_id,
+      h.horario
+
+    FROM medicamentos m
+
+    INNER JOIN horarios h
+      ON m.id = h.medicamento_id
+
+    WHERE m.ativo = 1
+
+    ORDER BY h.horario
+
+  `);
+
+};
+
+
+// src/services/historicoService.js
+
+import db from '../database/database';
+
+export const registrarTomada = (
+  medicamentoId,
+  horarioId
+) => {
+
+  db.runSync(
+    `
+      INSERT INTO historico
+      (
+        medicamento_id,
+        horario_id,
+        data_tomada,
+        status
+      )
+
+      VALUES
+      (
+        ?,
+        ?,
+        datetime('now'),
+        'Tomado'
+      )
+    `,
+    [
+      medicamentoId,
+      horarioId
+    ]
+  );
+
+};
+
+export const listarHistorico = () => {
+
+  return db.getAllSync(`
+
+    SELECT
+      h.id,
+      m.nome,
+      m.dosagem,
+      h.data_tomada,
+      h.status
+
+    FROM historico h
+
+    INNER JOIN medicamentos m
+      ON m.id = h.medicamento_id
+
+    ORDER BY h.data_tomada DESC
+
+  `);
+
+};
+
+
+// App.js
+
+import { useEffect } from 'react';
+import { criarTabelas } from './src/models/tabelas';
+
+export default function App() {
+
+  useEffect(() => {
+    criarTabelas();
+  }, []);
+
+}
